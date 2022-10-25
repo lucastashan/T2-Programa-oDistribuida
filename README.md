@@ -1,1 +1,1 @@
-# T2-Programa-oDistribuida
+# T2-ProgramacaoDistribuida
