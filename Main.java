@@ -1,14 +1,17 @@
 import java.io.File;
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
+	public static volatile int[] cont = {0, 1, 2};
 
 	public static void main(String[] args) throws IOException {
 		// configurando
@@ -90,6 +93,9 @@ public class Main {
 		Random rand = new Random();
 		int events_coun = 0;
 		while (events_coun < events) {
+			// for (int num : ports) {
+			// 	System.out.println("LISTA: "+num);
+			// }
 			float evento = rand.nextFloat();
 			int delay = rand.nextInt(min_delay, max_delay);
 			try {
@@ -98,15 +104,20 @@ public class Main {
 				Thread.currentThread().interrupt();
 			}
 
-			// Evento local
+			// // Evento local
 			if (evento > chance) {
-
 			}
 			// Evento de envio de mensagem
 			else {
-
+				int random = rand.nextInt(ports.size());
+				DatagramSocket datagramSocket = new DatagramSocket(9010);
+				byte[] relogio = "Ola".getBytes();
+				System.out.println("RANDOM: "+random+" PORTSIZE: "+ports.size());
+				DatagramPacket datagramPacket = new DatagramPacket(relogio, relogio.length, hosts.get(random), ports.get(random));
+				datagramSocket.send(datagramPacket);
+				datagramSocket.close();
 			}
-			System.out.println(evento);
+			// System.out.println(evento);
 			events_coun++;
 		}
 	}

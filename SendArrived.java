@@ -44,5 +44,20 @@ public class SendArrived extends Thread {
                 e.printStackTrace();
             }
         }
+        while(true) {
+            try (DatagramSocket datagramSocket = new DatagramSocket(port)) {
+                System.out.println("Porta: "+port);
+                byte[] buffer = new byte[1024];
+                DatagramPacket receiveDatagram = new DatagramPacket(buffer, buffer.length);
+                datagramSocket.receive(receiveDatagram);
+                String message = new String(buffer);
+                System.out.println(message);
+                datagramSocket.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                System.out.println("DEU RUIM");
+                e.printStackTrace();
+            }
+        }
     }
 }
