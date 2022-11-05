@@ -18,4 +18,8 @@ public class Configuracao {
         this.min_delay=min_delay;
         this.max_delay=max_delay;
     }
+
+    public void printConfiguracao(){
+        System.out.println(id+" "+nodeIp+" "+port+" "+chance+" "+events+" "+min_delay+" "+max_delay);
+    }
 }

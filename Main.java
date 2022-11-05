@@ -10,7 +10,11 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Main {
+	//Minha configuracao
 	private static Configuracao configuracao;
+	//Demais configuracoes
+	private static List<Configuracao> configs;
+	
 	private static int qtdDeProc;
 	private static List processos;
 	private static List<Integer> ports;
