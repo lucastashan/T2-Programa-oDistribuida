@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
@@ -17,7 +18,7 @@ public class Main {
 		LinkedList<InetAddress> hosts = new LinkedList<>();
 		List<Integer> ports = new LinkedList<>();
 		int i = 0;
-		while(i < linha) {
+		while (i < linha) {
 			String[] campos = reader.nextLine().split(" ");
 			hosts.add(InetAddress.getByName(campos[1]));
 			ports.add(Integer.parseInt(campos[2]));
@@ -30,13 +31,13 @@ public class Main {
 		int events = reader.nextInt();
 		int min_delay = reader.nextInt();
 		int max_delay = reader.nextInt();
-		if(reader.hasNextLine()){
+		if (reader.hasNextLine()) {
 			reader.nextLine();
 			i++;
 		}
 
 		// quantidade de processos no arquivo de configuracao
-		while(reader.hasNextLine()){
+		while (reader.hasNextLine()) {
 			String[] campos = reader.nextLine().split(" ");
 			hosts.add(InetAddress.getByName(campos[1]));
 			ports.add(Integer.parseInt(campos[2]));
@@ -46,7 +47,7 @@ public class Main {
 		List processos = new LinkedList<Integer>();
 
 		// criando o multicast
-		byte[] buffer=new byte[1024];
+		byte[] buffer = new byte[1024];
 		MulticastSocket socket = new MulticastSocket(4321);
 		InetAddress grupo = InetAddress.getByName("230.0.0.0");
 		socket.joinGroup(grupo);
@@ -56,16 +57,16 @@ public class Main {
 		sendArrived.start();
 
 		// vai ficar escutando ate todos chegarem
-		while(true) {
-			if( processos.size() == qtdDeProc) {
+		while (true) {
+			if (processos.size() == qtdDeProc) {
 				break;
 			}
 			System.out.println("Esperando pelos outros...");
 			DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 			socket.receive(packet);
 			String msg = new String(packet.getData(),
-			packet.getOffset(),packet.getLength());
-			if( !processos.contains(Integer.parseInt(msg)) ) {
+					packet.getOffset(), packet.getLength());
+			if (!processos.contains(Integer.parseInt(msg))) {
 				processos.add(Integer.parseInt(msg));
 			}
 			System.out.println(msg + " chegou.");
@@ -73,18 +74,40 @@ public class Main {
 		sendArrived.send();
 		sendArrived.stopThread();
 		System.out.println("Parou!");
-		ports.stream()
-			.forEach(System.out::println);
+		// ports.stream()
+		// .forEach(System.out::println);
 
 		// eventos
-
 
 		// int ttl = socket.getTimeToLive();
 		// socket.setTimeToLive(20);
 
 		// byte[] bytePort = Integer.toString(port).getBytes();
-		// DatagramPacket packet = new DatagramPacket(bytePort, bytePort.length, grupo, 9000);
+		// DatagramPacket packet = new DatagramPacket(bytePort, bytePort.length, grupo,
+		// 9000);
 		// socket.send(packet);
 		// socket.setTimeToLive(ttl);
+		Random rand = new Random();
+		int events_coun = 0;
+		while (events_coun < events) {
+			float evento = rand.nextFloat();
+			int delay = rand.nextInt(min_delay, max_delay);
+			try {
+				Thread.sleep(delay);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+
+			// Evento local
+			if (evento > chance) {
+
+			}
+			// Evento de envio de mensagem
+			else {
+
+			}
+			System.out.println(evento);
+			events_coun++;
+		}
 	}
 }
