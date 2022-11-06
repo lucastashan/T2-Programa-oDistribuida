@@ -5,9 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.net.Socket;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
@@ -15,14 +13,18 @@ import java.util.Scanner;
 public class Main {
 	public static volatile int[] cont = {0, 1, 2};
 
+	//Minhas configuracoes lidas do arquivo
 	public static Configuracao myConfig;
+	//Demais configuracoes lidas do arquivo
 	public static List<Configuracao> otherConfigs;
+	//Meu Vetor local para contasgem dos tempos
+	public static Vetor vetor;
 
 	public static void main(String[] args) throws IOException {
 		otherConfigs = new ArrayList<Configuracao>();
 		List<String> listConfigsString = LeArquivo("config.txt");
 		Configure(args[0], listConfigsString);
-		
+		vetor = new Vetor(otherConfigs.size() + 1);
 
 		//Configura o multicast
 		byte[] buffer = new byte[1024];
@@ -61,26 +63,26 @@ public class Main {
 		sendArrived.stopMulticast();
 		System.out.println("Iniciando o envio de mensagens...");
 
-		Random rand = new Random();
-		int events_coun = 0;
-		while (events_coun < myConfig.events) {
-			// for (int num : ports) {
-			// 	System.out.println("LISTA: "+num);
-			// }
-			float evento = rand.nextFloat();
-			int delay = rand.nextInt(myConfig.min_delay, myConfig.max_delay);
+		//Inicia a geracao de eventos, ao mesmo tempo a thred iniciada anteriormente passa a escutar as demais mensagens
+		Random rng = new Random();
+		int eventsCount = 0;
+		while (eventsCount < myConfig.events) {
+			float event = rng.nextFloat();
+			int delay = rng.nextInt(myConfig.min_delay, myConfig.max_delay);
 			try {
 				Thread.sleep(delay);
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
 
-			// // Evento local
-			if (evento > myConfig.chance) {
+			//Evento local
+			if (event > myConfig.chance) {
+				System.out.println("Evento local...");
 			}
-			// Evento de envio de mensagem
+			//Evento de envio de mensagem
 			else {
-				int random = rand.nextInt(otherConfigs.size());
+				System.out.println("Evento de envio");
+				int random = rng.nextInt(otherConfigs.size());
 				DatagramSocket datagramSocket = new DatagramSocket(9010);
 				byte[] relogio = "Ola".getBytes();
 				System.out.println("RANDOM: "+random+" PORTSIZE: "+otherConfigs.size());
@@ -89,7 +91,7 @@ public class Main {
 				datagramSocket.close();
 			}
 			// System.out.println(evento);
-			events_coun++;
+			eventsCount++;
 		}
 	}
 

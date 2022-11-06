@@ -20,4 +20,17 @@ public class Vetor {
         }
         return vet;
     }
+
+    //Transforma o vetor em uma string formatada para ser enviado como mensagem
+    public String formatToMessage(){
+        String formatedMessage = "";
+        for(int i=0;i<vet.length;i++){
+            if(i==vet.length-1){
+                formatedMessage+=vet[i];
+            }else{
+                formatedMessage+=vet[i]+",";
+            }
+        }
+        return formatedMessage;
+    }
 }
