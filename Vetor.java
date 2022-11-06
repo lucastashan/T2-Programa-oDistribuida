@@ -3,12 +3,12 @@ public class Vetor {
 
     //Recebe o numero de outras configuracoes e inicia o array de int local
     public Vetor(int numConfigs){
-        this.vet = new int[numConfigs];
+        vet = new int[numConfigs];
     }
 
     //Recebe o array em string e transforma em um array de int, construtor usado para o recebimento de mensagens
     public Vetor(String stringVet){
-        this.vet = stringToIntArray(stringVet);
+        vet = stringToIntArray(stringVet);
     }
 
     // Formato do array de entrada = String "1,2,3,4,5"
@@ -32,5 +32,15 @@ public class Vetor {
             }
         }
         return formatedMessage;
+    }
+
+    // metodo para o print
+    public String toString() {
+        String s = "[";
+        for(int i = 0; i < vet.length - 1; i++) {
+            s += Integer.toString(vet[i]) + ",";
+        }
+        s += Integer.toString(vet[vet.length-1]) + "]";
+        return s;
     }
 }

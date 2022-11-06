@@ -11,20 +11,25 @@ import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
-	public static volatile int[] cont = {0, 1, 2};
+	// public static volatile int[] cont = {0, 1, 2};
 
 	//Minhas configuracoes lidas do arquivo
 	public static Configuracao myConfig;
 	//Demais configuracoes lidas do arquivo
 	public static List<Configuracao> otherConfigs;
-	//Meu Vetor local para contasgem dos tempos
-	public static Vetor vetor;
+	//Meu Vetor local para contagem dos tempos
+	public static volatile Vetor vetor;
+	public static DatagramSocket datagramSocket;
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, InterruptedException {
 		otherConfigs = new ArrayList<Configuracao>();
 		List<String> listConfigsString = LeArquivo("config.txt");
 		Configure(args[0], listConfigsString);
 		vetor = new Vetor(otherConfigs.size() + 1);
+		System.out.println("port -> "+myConfig.port);
+		datagramSocket =  new DatagramSocket(myConfig.port);
+		DatagramSocket recSocket = new DatagramSocket(myConfig.port+1);
+		recSocket.setSoTimeout(5000);
 
 		//Configura o multicast
 		byte[] buffer = new byte[1024];
@@ -61,9 +66,10 @@ public class Main {
 		//Envia uma ultima mensagem depois de pronto e para o multicast
 		sendArrived.send();
 		sendArrived.stopMulticast();
-		System.out.println("Iniciando o envio de mensagens...");
 
+		System.out.println("Iniciando o relogio...");
 		//Inicia a geracao de eventos, ao mesmo tempo a thred iniciada anteriormente passa a escutar as demais mensagens
+		Thread.sleep(1000);
 		Random rng = new Random();
 		int eventsCount = 0;
 		while (eventsCount < myConfig.events) {
@@ -75,24 +81,40 @@ public class Main {
 				Thread.currentThread().interrupt();
 			}
 
+			vetor.vet[myConfig.id-1]++;
 			//Evento local
 			if (event > myConfig.chance) {
 				System.out.println("Evento local...");
+				System.out.println(myConfig.id + vetor.toString() + " L");
 			}
 			//Evento de envio de mensagem
 			else {
-				System.out.println("Evento de envio");
+				System.out.println("Envio de mensagem...");
 				int random = rng.nextInt(otherConfigs.size());
-				DatagramSocket datagramSocket = new DatagramSocket(9010);
-				byte[] relogio = "Ola".getBytes();
-				System.out.println("RANDOM: "+random+" PORTSIZE: "+otherConfigs.size());
-				DatagramPacket datagramPacket = new DatagramPacket(relogio, relogio.length, otherConfigs.get(random).nodeIp, otherConfigs.get(random).port);
+				Configuracao destino = otherConfigs.get(random);
+				// DatagramSocket datagramSocket = new DatagramSocket(9010);
+				String send_message = vetor.formatToMessage() + "," + myConfig.id;
+				byte[] relogio = send_message.getBytes();
+				// System.out.println("RANDOM: "+random+" PORTSIZE: "+otherConfigs.size());
+				DatagramPacket datagramPacket = new DatagramPacket(relogio, relogio.length, destino.nodeIp, destino.port);
 				datagramSocket.send(datagramPacket);
-				datagramSocket.close();
+				System.out.println(myConfig.id + vetor.toString() + " S " + destino.id);
+				// datagramSocket.close();
+				datagramPacket = new DatagramPacket(buffer, buffer.length);
+				try {
+					recSocket.receive(datagramPacket);
+					System.out.println("OK recebido!");
+				} catch ( Exception e ) {
+					sendArrived.stopMulticast();
+					break;
+				}
 			}
-			// System.out.println(evento);
+			System.out.println();
 			eventsCount++;
 		}
+		sendArrived.stopMulticast();
+		sendArrived.stop();
+		System.out.println("FIM");
 	}
 
 	//Retorna True se a aplicacao pode ser iniciada, ou seja, se todos os processos estiverem prontos
