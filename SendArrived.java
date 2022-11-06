@@ -24,7 +24,7 @@ public class SendArrived extends Thread {
         socket.close();
     }  
     
-    public void stopThread() {
+    public void stopMulticast() {
         exit = true;
     }
 

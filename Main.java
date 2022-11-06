@@ -1,10 +1,12 @@
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -13,91 +15,60 @@ import java.util.Scanner;
 public class Main {
 	public static volatile int[] cont = {0, 1, 2};
 
+	public static Configuracao myConfig;
+	public static List<Configuracao> otherConfigs;
+
 	public static void main(String[] args) throws IOException {
-		// configurando
-		File confFile = new File("config.txt");
-		Scanner reader = new Scanner(confFile);
-		int linha = Integer.parseInt(args[0]);
-		LinkedList<InetAddress> hosts = new LinkedList<>();
-		List<Integer> ports = new LinkedList<>();
-		int i = 0;
-		while (i < linha) {
-			String[] campos = reader.nextLine().split(" ");
-			hosts.add(InetAddress.getByName(campos[1]));
-			ports.add(Integer.parseInt(campos[2]));
-			i++;
-		}
-		int id = reader.nextInt();
-		InetAddress nodeIp = InetAddress.getByName(reader.next());
-		int port = reader.nextInt();
-		float chance = reader.nextFloat();
-		int events = reader.nextInt();
-		int min_delay = reader.nextInt();
-		int max_delay = reader.nextInt();
-		if (reader.hasNextLine()) {
-			reader.nextLine();
-			i++;
-		}
+		otherConfigs = new ArrayList<Configuracao>();
+		List<String> listConfigsString = LeArquivo("config.txt");
+		Configure(args[0], listConfigsString);
+		
 
-		// quantidade de processos no arquivo de configuracao
-		while (reader.hasNextLine()) {
-			String[] campos = reader.nextLine().split(" ");
-			hosts.add(InetAddress.getByName(campos[1]));
-			ports.add(Integer.parseInt(campos[2]));
-			i++;
-		}
-		int qtdDeProc = i;
-		List processos = new LinkedList<Integer>();
-
-		// criando o multicast
+		//Configura o multicast
 		byte[] buffer = new byte[1024];
 		MulticastSocket socket = new MulticastSocket(4321);
 		InetAddress grupo = InetAddress.getByName("230.0.0.0");
 		socket.joinGroup(grupo);
 
-		// vai ficar enviando ate todos chegarem
-		SendArrived sendArrived = new SendArrived(port);
+		//Fica enviando mensagens ate que todos os processos estejam prontos 
+		SendArrived sendArrived = new SendArrived(myConfig.port);
 		sendArrived.start();
 
-		// vai ficar escutando ate todos chegarem
+		//Fica escutando as mensagens e conferindo os processos ate que todos estejam prontos para iniciar juntos
+		System.out.println("Esperando pelos outros...");
 		while (true) {
-			if (processos.size() == qtdDeProc) {
-				break;
-			}
-			System.out.println("Esperando pelos outros...");
+			//------------------------
+			//Espera o recebimento da mensagem
+			System.out.println(".");
 			DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 			socket.receive(packet);
-			String msg = new String(packet.getData(),
-					packet.getOffset(), packet.getLength());
-			if (!processos.contains(Integer.parseInt(msg))) {
-				processos.add(Integer.parseInt(msg));
+			//Recebe a porta por mensagem de outros processos e converte para inteiro para comparacoes
+			int receivedMessage = Integer.parseInt(new String(packet.getData(), packet.getOffset(), packet.getLength()));
+
+			//Confere se nao recebeu a mensagem de si mesmo e entao marca o processo que enviou como pronto 
+			if(receivedMessage != myConfig.port){
+				System.out.println("Received message: " + receivedMessage);
+				for(Configuracao c : otherConfigs)
+					if(c.port == receivedMessage) c.ready = true;
 			}
-			System.out.println(msg + " chegou.");
+			//----------------------
+
+			if(isReady())
+				break;
 		}
+		//Envia uma ultima mensagem depois de pronto e para o multicast
 		sendArrived.send();
-		sendArrived.stopThread();
-		System.out.println("Parou!");
-		// ports.stream()
-		// .forEach(System.out::println);
+		sendArrived.stopMulticast();
+		System.out.println("Iniciando o envio de mensagens...");
 
-		// eventos
-
-		// int ttl = socket.getTimeToLive();
-		// socket.setTimeToLive(20);
-
-		// byte[] bytePort = Integer.toString(port).getBytes();
-		// DatagramPacket packet = new DatagramPacket(bytePort, bytePort.length, grupo,
-		// 9000);
-		// socket.send(packet);
-		// socket.setTimeToLive(ttl);
 		Random rand = new Random();
 		int events_coun = 0;
-		while (events_coun < events) {
+		while (events_coun < myConfig.events) {
 			// for (int num : ports) {
 			// 	System.out.println("LISTA: "+num);
 			// }
 			float evento = rand.nextFloat();
-			int delay = rand.nextInt(min_delay, max_delay);
+			int delay = rand.nextInt(myConfig.min_delay, myConfig.max_delay);
 			try {
 				Thread.sleep(delay);
 			} catch (InterruptedException e) {
@@ -105,20 +76,61 @@ public class Main {
 			}
 
 			// // Evento local
-			if (evento > chance) {
+			if (evento > myConfig.chance) {
 			}
 			// Evento de envio de mensagem
 			else {
-				int random = rand.nextInt(ports.size());
+				int random = rand.nextInt(otherConfigs.size());
 				DatagramSocket datagramSocket = new DatagramSocket(9010);
 				byte[] relogio = "Ola".getBytes();
-				System.out.println("RANDOM: "+random+" PORTSIZE: "+ports.size());
-				DatagramPacket datagramPacket = new DatagramPacket(relogio, relogio.length, hosts.get(random), ports.get(random));
+				System.out.println("RANDOM: "+random+" PORTSIZE: "+otherConfigs.size());
+				DatagramPacket datagramPacket = new DatagramPacket(relogio, relogio.length, otherConfigs.get(random).nodeIp, otherConfigs.get(random).port);
 				datagramSocket.send(datagramPacket);
 				datagramSocket.close();
 			}
 			// System.out.println(evento);
 			events_coun++;
 		}
+	}
+
+	//Retorna True se a aplicacao pode ser iniciada, ou seja, se todos os processos estiverem prontos
+	private static boolean isReady(){
+		for(Configuracao c : otherConfigs)
+			if(c.ready == false)
+				return false;
+
+		return true;
+	}
+
+	//Le o arquivo e retorna uma lista com todas as configuracoes
+	private static List<String> LeArquivo(String nomeArq) throws FileNotFoundException{
+		List<String> listConfigs = new ArrayList<String>();
+		File configFile = new File(nomeArq);
+		Scanner reader = new Scanner(configFile);
+
+		while(reader.hasNextLine()){
+			listConfigs.add(reader.nextLine());
+		}
+		reader.close();
+
+		System.out.println(listConfigs.toString());
+		return listConfigs;
+	}
+
+	//Configura a aplicacao com a sua configuracao local, e carrega as demais configuracoes em uma lista para a troca de informacoes
+	//Recebe o primeiro argumento da lista de comandos para setar a sua propria configuracao, seu id. Ex a primeira config da lista = 1
+	private static void Configure(String id, List<String> listConfigsString){
+		//Adiciona todas as configuracoes a lista
+		for(String s : listConfigsString)
+			otherConfigs.add(new Configuracao(s));
+
+		//Remove a minha da lista e salva ela em myConfig
+		for(int i=0; i<otherConfigs.size();i++)
+			if (otherConfigs.get(i).id == Integer.parseInt(id)){
+				myConfig = otherConfigs.remove(i);
+			}
+		
+		System.out.println("MyConfig = " + myConfig.toString());
+		System.out.println("OtherConfigs = " + otherConfigs.toString());
 	}
 }
