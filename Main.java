@@ -11,7 +11,6 @@ import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
-	// public static volatile int[] cont = {0, 1, 2};
 
 	//Minhas configuracoes lidas do arquivo
 	public static Configuracao myConfig;
@@ -92,14 +91,11 @@ public class Main {
 				System.out.println("Envio de mensagem...");
 				int random = rng.nextInt(otherConfigs.size());
 				Configuracao destino = otherConfigs.get(random);
-				// DatagramSocket datagramSocket = new DatagramSocket(9010);
 				String send_message = vetor.formatToMessage() + "," + myConfig.id;
 				byte[] relogio = send_message.getBytes();
-				// System.out.println("RANDOM: "+random+" PORTSIZE: "+otherConfigs.size());
 				DatagramPacket datagramPacket = new DatagramPacket(relogio, relogio.length, destino.nodeIp, destino.port);
 				datagramSocket.send(datagramPacket);
 				System.out.println(myConfig.id + vetor.toString() + " S " + destino.id);
-				// datagramSocket.close();
 				datagramPacket = new DatagramPacket(buffer, buffer.length);
 				try {
 					recSocket.receive(datagramPacket);
