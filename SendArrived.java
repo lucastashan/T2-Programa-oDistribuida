@@ -2,8 +2,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 public class SendArrived extends Thread {
 
@@ -57,11 +57,13 @@ public class SendArrived extends Thread {
         }
         exit = false;
         while (!exit) {
-            // try (DatagramSocket datagramSocket = new DatagramSocket(port)) {
             byte[] buffer = new byte[1024];
             DatagramPacket receiveDatagram = new DatagramPacket(buffer, buffer.length);
             try {
+                // Em 5 segundo ele ve se exit igual true
+                Main.datagramSocket.setSoTimeout(5000);
                 Main.datagramSocket.receive(receiveDatagram);
+
                 System.out.println("Recebeu mensagem...");
                 InetAddress inetAddress = receiveDatagram.getAddress();
                 int porta = receiveDatagram.getPort();
@@ -80,18 +82,12 @@ public class SendArrived extends Thread {
                 Main.vetor = max(vetor_recebido, Main.vetor, Main.myConfig.id);
                 System.out.println(Main.myConfig.id + Main.vetor.toString() + " R " + s + vetor_recebido.toString());
                 System.out.println();
+            } catch (SocketTimeoutException e) {
+                continue;
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
-                break;
             }
-            // datagramSocket.close();
-            // } catch (IOException e) {
-            // // TODO Auto-generated catch block
-            // System.out.println("DEU RUIM");
-            // e.printStackTrace();
-            // }
         }
-        System.out.println("SAI DO LAÇO");
     }
 }
